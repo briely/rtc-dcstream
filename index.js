@@ -62,7 +62,7 @@ function RTCChannelStream(channel, opts) {
 
   // Setup our chunking behaviour.
   this.chunked = !(opts||{}).chunked;
-  this.activeChunkSize = (opts||{}).chunkSize || MAX_CHUNK_SIZE;
+  this.chunkSize = (opts||{}).chunkSize || MAX_CHUNK_SIZE;
 
   // set the channel binaryType to arraybuffer
   channel.binaryType = 'arraybuffer';
@@ -167,6 +167,8 @@ prot._write = function(chunk, encoding, callback) {
   // process in chunks of an appropriate size for the data channel
   var length = chunk.length || chunk.byteLength || chunk.size;
   var numChunks = this.chunked ? Math.ceil(length / this.chunkSize) : 1;
+  var chunkSize = this.chunked ? this.chunkSize : length;
+
   var _returned = false;
   // debug('_write ' + length + ' in ' + numChunks + ' chunks');
 
@@ -183,8 +185,8 @@ prot._write = function(chunk, encoding, callback) {
   // we ensure that writes are only for chunks within the MAX_CHUNK_SIZE
   // If not, we split it up further into smaller chunks
   for (var i = 0; i < numChunks; i++) {
-    var offset = i * this.chunkSize;
-    var until = offset + this.chunksize;
+    var offset = i * chunkSize;
+    var until = offset + chunksize;
     var currentChunk = (numChunks === 1 ? chunk : chunk.slice(offset, until));
     var ccLength = currentChunk.length || currentChunk.byteLength || currentChunk.size;
 
