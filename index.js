@@ -38,10 +38,11 @@ var MAX_CHUNK_SIZE = 1024 * 64;
 
 **/
 
-function RTCChannelStream(channel) {
+function RTCChannelStream(channel, opts) {
   if (! (this instanceof RTCChannelStream)) {
-    return new RTCChannelStream(channel);
+    return new RTCChannelStream(channel, opts);
   }
+
 
   // super
   stream.Duplex.call(this, {
@@ -58,6 +59,10 @@ function RTCChannelStream(channel) {
 
   // save a reference to the channel
   this.channel = channel;
+
+  // Setup our chunking behaviour.
+  this.chunked = !(opts||{}).chunked;
+  this.activeChunkSize = (opts||{}).chunkSize || MAX_CHUNK_SIZE;
 
   // set the channel binaryType to arraybuffer
   channel.binaryType = 'arraybuffer';
@@ -161,7 +166,7 @@ prot._write = function(chunk, encoding, callback) {
 
   // process in chunks of an appropriate size for the data channel
   var length = chunk.length || chunk.byteLength || chunk.size;
-  var numChunks = Math.ceil(length / MAX_CHUNK_SIZE);
+  var numChunks = this.chunked ? Math.ceil(length / this.chunkSize) : 1;
   var _returned = false;
   // debug('_write ' + length + ' in ' + numChunks + ' chunks');
 
@@ -178,8 +183,8 @@ prot._write = function(chunk, encoding, callback) {
   // we ensure that writes are only for chunks within the MAX_CHUNK_SIZE
   // If not, we split it up further into smaller chunks
   for (var i = 0; i < numChunks; i++) {
-    var offset = i * MAX_CHUNK_SIZE;
-    var until = offset + MAX_CHUNK_SIZE;
+    var offset = i * this.chunkSize;
+    var until = offset + this.chunksize;
     var currentChunk = (numChunks === 1 ? chunk : chunk.slice(offset, until));
     var ccLength = currentChunk.length || currentChunk.byteLength || currentChunk.size;
 
